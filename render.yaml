@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: telegram-amazon-bot
+    env: python
+    plan: free
+    buildCommand: ""
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: AMAZON_ACCESS_KEY
+        sync: false
+      - key: AMAZON_SECRET_KEY
+        sync: false
+      - key: PARTNER_TAG
+        sync: false
+      - key: AMAZON_HOST
+        sync: false
+      - key: AMAZON_REGION
+        sync: false
