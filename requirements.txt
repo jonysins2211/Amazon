@@ -1,0 +1,5 @@
+python-telegram-bot==21.1.1
+amightygirl.paapi5-python-sdk==1.0.0
+deep-translator==1.11.4
+requests>=2.25.1
+python-dotenv>=1.0.0
