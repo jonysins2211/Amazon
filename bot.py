@@ -34,7 +34,6 @@ bot = Bot(token=TELEGRAM_TOKEN)
 
 def convert_to_affiliate_link(url):
     try:
-        # Expand shortened links first
         if "amzn.to" in url:
             url = expand_url(url)
 
@@ -44,13 +43,13 @@ def convert_to_affiliate_link(url):
             return None
 
         query = parse_qs(parsed.query)
-        query["tag"] = [PARTNER_TAG]  # Inject affiliate tag
+        query["tag"] = [PARTNER_TAG]
 
         new_query = urlencode(query, doseq=True)
         new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', new_query, ''))
         return new_url
     except Exception as e:
-        print(f"❌ Error converting to affiliate link: {e}")
+        logging.error(f"❌ Error converting to affiliate link: {e}")
         return None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -67,14 +66,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text("❌ Could not process this link.")
             return
 
-        amazon_api = AmazonAPI()
-        product = amazon_api.get_product_from_url(affiliate_link)
+        try:
+            amazon_api = AmazonAPI()
+            product = amazon_api.get_product_from_url(affiliate_link)
+        except Exception as e:
+            logging.error(f"❌ Error fetching product: {e}")
+            await update.message.reply_text("⚠️ Failed to fetch product details.")
+            return
 
         if product is None:
+            logging.warning(f"ASIN not found or product data missing for: {affiliate_link}")
             await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
-        image_url, caption = create_product_post(product)
+        try:
+            image_url, caption = create_product_post(product)
+        except Exception as e:
+            logging.error(f"❌ Error creating product post: {e}")
+            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
+            return
 
         if not image_url or not caption:
             await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
@@ -89,19 +99,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             )
             await update.message.reply_text("✅ Post sent to channel.")
         except Exception as e:
-            logging.error(f"Error sending to channel: {e}")
+            logging.error(f"❌ Error sending to channel: {e}")
             await update.message.reply_text("⚠️ Error sending post.")
     else:
         await update.message.reply_text("Please send a valid Amazon link.")
 
 # --- Main ---
 if __name__ == '__main__':
-    # Run Flask in background
-    Thread(target=run_flask).start()
-
-    # Run Telegram bot in main thread (asyncio required)
-    logging.info("Starting Telegram bot polling...")
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT, handle_message))
-    app.run_polling()
+    try:
+        Thread(target=run_flask).start()
+        logging.info("Starting Telegram bot polling...")
+        app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT, handle_message))
+        app.run_polling()
+    except Exception as e:
+        logging.critical(f"🔥 Fatal error: {e}")
