@@ -1,31 +1,42 @@
 import logging
+import os
+from flask import Flask
+from threading import Thread
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+
 from constants import *
-from create_messages import *
-from amazon_api import AmazonAPI
 from create_messages import create_product_post
-from utils import expand_url  # Assume you move the function to a utils file
+from amazon_api import AmazonAPI
+from utils import expand_url
 
-
+# --- Setup Logging ---
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
+# --- Dummy Flask Server (keeps Render Web Service alive) ---
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def home():
+    return 'Bot is alive!'
+
+def run_flask():
+    port = int(os.environ.get("PORT", 5000))
+    logging.info(f"Running Flask on port {port}")
+    flask_app.run(host="0.0.0.0", port=port)
+
+# --- Telegram Bot Logic ---
 bot = Bot(token=TELEGRAM_TOKEN)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(f'Welcome {update.effective_user.first_name}, send me the amazon link of a product for '
-                                    'create the post on your channel!')
-
-from amazon_api import AmazonAPI
-from create_messages import create_product_post
-from utils import expand_url  # Assume you move the function to a utils file
+    await update.message.reply_text(f'Hi {update.effective_user.first_name}, send me an Amazon link!')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message_text = update.message.text
-    logging.info(f"Received message: {message_text}")
+    logging.info(f"Message received: {message_text}")
 
     if 'amazon.' in message_text or 'amzn.to' in message_text:
         if 'amzn.to' in message_text:
@@ -44,6 +55,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         image_url, caption = create_product_post(product)
 
+        if not image_url or not caption:
+            await update.message.reply_text("Product data incomplete.")
+            return
+
         try:
             await bot.send_photo(
                 chat_id=CHANNEL_ID,
@@ -51,19 +66,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 caption=caption,
                 parse_mode='HTML'
             )
+            await update.message.reply_text("✅ Post sent to channel.")
         except Exception as e:
-            logging.error(f"Error sending photo: {e}")
-            await update.message.reply_text("An error occurred while sending the image to the channel.")
+            logging.error(f"Error sending to channel: {e}")
+            await update.message.reply_text("Error sending post.")
     else:
         await update.message.reply_text("Please send a valid Amazon link.")
 
-
-
-app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
-
-app.add_handler(CommandHandler('start', start))
-app.add_handler(MessageHandler(filters.TEXT, handle_message))
-
+# --- Main ---
 if __name__ == '__main__':
-    print("Starting bot polling...")
+    # Run Flask in background
+    Thread(target=run_flask).start()
+
+    # Run Telegram bot in main thread (asyncio required)
+    logging.info("Starting Telegram bot polling...")
+    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))
     app.run_polling()
