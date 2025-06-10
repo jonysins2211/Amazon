@@ -4,6 +4,7 @@ from flask import Flask
 from threading import Thread
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 from constants import *
 from create_messages import create_product_post
@@ -31,6 +32,27 @@ def run_flask():
 # --- Telegram Bot Logic ---
 bot = Bot(token=TELEGRAM_TOKEN)
 
+def convert_to_affiliate_link(url):
+    try:
+        # Expand shortened links first
+        if "amzn.to" in url:
+            url = expand_url(url)
+
+        parsed = urlparse(url)
+
+        if "amazon." not in parsed.netloc:
+            return None
+
+        query = parse_qs(parsed.query)
+        query["tag"] = [PARTNER_TAG]  # Inject affiliate tag
+
+        new_query = urlencode(query, doseq=True)
+        new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', new_query, ''))
+        return new_url
+    except Exception as e:
+        print(f"❌ Error converting to affiliate link: {e}")
+        return None
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'Hi {update.effective_user.first_name}, send me an Amazon link!')
 
@@ -39,24 +61,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logging.info(f"Message received: {message_text}")
 
     if 'amazon.' in message_text or 'amzn.to' in message_text:
-        if 'amzn.to' in message_text:
-            expanded_url = expand_url(message_text)
-            if not expanded_url:
-                await update.message.reply_text("Could not expand the shortened Amazon link.")
-                return
-            message_text = expanded_url
+        affiliate_link = convert_to_affiliate_link(message_text)
+
+        if not affiliate_link:
+            await update.message.reply_text("❌ Could not process this link.")
+            return
 
         amazon_api = AmazonAPI()
-        product = amazon_api.get_product_from_url(message_text)
+        product = amazon_api.get_product_from_url(affiliate_link)
 
         if product is None:
-            await update.message.reply_text("I couldn't find the product. Please check the link.")
+            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
         image_url, caption = create_product_post(product)
 
         if not image_url or not caption:
-            await update.message.reply_text("Product data incomplete.")
+            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
         try:
@@ -69,7 +90,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             await update.message.reply_text("✅ Post sent to channel.")
         except Exception as e:
             logging.error(f"Error sending to channel: {e}")
-            await update.message.reply_text("Error sending post.")
+            await update.message.reply_text("⚠️ Error sending post.")
     else:
         await update.message.reply_text("Please send a valid Amazon link.")
 
