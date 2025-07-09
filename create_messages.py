@@ -9,7 +9,7 @@ def create_product_post(product):
 
     try:
         title = product.item_info.title.display_value
-        translated_title = GoogleTranslator(source='auto', target='mr').translate(title)
+        translated_title = GoogleTranslator(source='auto', target='en').translate(title)
         image_url = product.images.primary.large.url
 
         price = None
@@ -27,22 +27,22 @@ def create_product_post(product):
 
         # ✅ Build caption
         caption += f"🎯 <b>{translated_title}</b>\n\n"
-        caption += f"💥 किंमत: <b>{price}₹</b>\n"
+        caption += f"💥 Price: <b>{price}₹</b>\n"
 
         if old_price:
-            caption += f"❌ जुनी किंमत: <s>{old_price}₹</s>\n"
-            caption += f"🎁 बचत: <b>{old_price - price}₹</b>\n\n"
+            caption += f"❌ Old Price: <s>{old_price}₹</s>\n"
+            caption += f"🎁 Savings: <b>{old_price - price}₹</b>\n\n"
         else:
             caption += "\n"
 
         caption += (
-            f"🚀 <b>फायदे:</b>\n"
-            f"• दर्जेदार उत्पादन 🔝\n"
-            f"• Deals Marathi ची खात्रीशीर डिल 🔐\n"
-            f"• सवलतीत खरेदीची संधी 🛍️\n\n"
+            f"🚀 <b>Benefits:</b>\n"
+            f"• High-quality product 🔝\n"
+            f"• Verified deal by Deals Marathi 🔐\n"
+            f"• Opportunity to buy at a discount 🛍️\n\n"
         )
 
-        caption += f"👇🏻 खरेदीसाठी क्लिक करा:\n👉🏻 {product.detail_page_url} ✅"
+        caption += f"👇🏻 Click to buy:\n👉🏻 {product.detail_page_url} ✅"
 
         return image_url, caption
 
