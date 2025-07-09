@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- Dummy Flask Server (keeps Render Web Service alive) ---
+# --- Dummy Flask Server (to keep service alive on platforms like Render) ---
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
@@ -29,7 +29,7 @@ def run_flask():
     logging.info(f"Running Flask on port {port}")
     flask_app.run(host="0.0.0.0", port=port)
 
-# --- Telegram Bot Logic ---
+# --- Telegram Bot ---
 bot = Bot(token=TELEGRAM_TOKEN)
 
 def convert_to_affiliate_link(url):
@@ -59,6 +59,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     message = update.message
     message_text = message.text or message.caption or ""
     logging.info(f"📩 Message received: {message_text}")
+    logging.info(f"🔍 From user: {message.from_user.id}, Forwarded: {bool(message.forward_date)}")
+    logging.info(f"🔍 Message type: text={bool(message.text)}, caption={bool(message.caption)}")
 
     if 'amazon.' in message_text or 'amzn.to' in message_text:
         affiliate_link = convert_to_affiliate_link(message_text)
@@ -115,7 +117,7 @@ if __name__ == '__main__':
 
         app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+        app.add_handler(MessageHandler((filters.TEXT | filters.CAPTION) & ~filters.COMMAND, handle_message))
         app.run_polling()
     except Exception as e:
         logging.critical(f"🔥 Fatal error: {e}")
