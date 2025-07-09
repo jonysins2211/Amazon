@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- Dummy Flask Server (to keep service alive on platforms like Render) ---
+# --- Dummy Flask Server (to keep service alive on platforms like Render/Heroku) ---
 flask_app = Flask(__name__)
 
 @flask_app.route('/')
@@ -57,9 +57,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
+
+    # 🛑 Safeguard: ensure message exists
+    if not message:
+        logging.warning("⚠️ No message object found in update.")
+        return
+
+    # Safely get message text or caption
     message_text = message.text or message.caption or ""
     logging.info(f"📩 Message received: {message_text}")
-    logging.info(f"🔍 From user: {message.from_user.id}, Forwarded: {bool(message.forward_date)}")
+
+    # Safe log of user and forward status
+    user_id = message.from_user.id if message.from_user else "Unknown"
+    is_forwarded = hasattr(message, "forward_date") and message.forward_date is not None
+    logging.info(f"🔍 From user: {user_id}, Forwarded: {is_forwarded}")
     logging.info(f"🔍 Message type: text={bool(message.text)}, caption={bool(message.caption)}")
 
     if 'amazon.' in message_text or 'amzn.to' in message_text:
@@ -117,7 +128,10 @@ if __name__ == '__main__':
 
         app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
         app.add_handler(CommandHandler("start", start))
+
+        # ✅ Important fix: TEXT | CAPTION handles all message types (manual + forwarded)
         app.add_handler(MessageHandler((filters.TEXT | filters.CAPTION) & ~filters.COMMAND, handle_message))
+
         app.run_polling()
     except Exception as e:
         logging.critical(f"🔥 Fatal error: {e}")
