@@ -56,7 +56,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(f'👋 Hi {update.effective_user.first_name}, send me an Amazon link!')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message_text = update.message.text
+    message = update.message
+    message_text = message.text or message.caption or ""
     logging.info(f"📩 Message received: {message_text}")
 
     if 'amazon.' in message_text or 'amzn.to' in message_text:
@@ -64,7 +65,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         if not affiliate_link:
             logging.warning("❌ Could not create affiliate link.")
-            await update.message.reply_text("❌ Could not process this link.")
+            await message.reply_text("❌ Could not process this link.")
             return
 
         try:
@@ -72,24 +73,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             product = amazon_api.get_product_from_url(affiliate_link)
         except Exception as e:
             logging.error(f"❌ Error fetching product: {e}")
-            await update.message.reply_text("⚠️ Failed to fetch product details.")
+            await message.reply_text("⚠️ Failed to fetch product details.")
             return
 
         if not product:
             logging.warning(f"⚠️ ASIN not found or product data missing for: {affiliate_link}")
-            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
+            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
         try:
             image_url, caption = create_product_post(product)
         except Exception as e:
             logging.error(f"❌ Error creating product post: {e}")
-            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
+            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
         if not image_url or not caption:
             logging.warning("⚠️ Missing image or caption.")
-            await update.message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
+            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
             return
 
         try:
@@ -99,12 +100,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 caption=caption,
                 parse_mode='HTML'
             )
-            await update.message.reply_text("✅ Post sent to channel.")
+            await message.reply_text("✅ Post sent to channel.")
         except Exception as e:
             logging.error(f"❌ Error sending to channel: {e}")
-            await update.message.reply_text("⚠️ Error sending post.")
+            await message.reply_text("⚠️ Error sending post.")
     else:
-        await update.message.reply_text("❗️Please send a valid Amazon link.")
+        await message.reply_text("❗️Please send a valid Amazon link.")
 
 # --- Main App Start ---
 if __name__ == '__main__':
