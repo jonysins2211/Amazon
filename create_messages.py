@@ -9,52 +9,34 @@ def create_product_post(product):
         return None, None
 
     try:
+        # Translate product title to English
         title = product.item_info.title.display_value
         translated_title = GoogleTranslator(source='auto', target='en').translate(title)
+
+        # Get product image
         image_url = product.images.primary.large.url
 
+        # Get price and savings from the first listing only (base repo logic)
         price = None
         old_price = None
         savings = None
 
-        # ✅ Use lowest offer instead of only the first one
         if product.offers and product.offers.listings:
-            best_offer = None
+            price = product.offers.listings[0].price.amount
+            savings_data = product.offers.listings[0].price.savings
+            if savings_data and savings_data.amount:
+                savings = savings_data.amount
+                old_price = price + savings
 
-            for listing in product.offers.listings:
-                try:
-                    offer_price = listing.price.amount
-                    if not best_offer or offer_price < best_offer.price.amount:
-                        best_offer = listing
-                except:
-                    continue
-
-            if best_offer:
-                price = best_offer.price.amount
-                savings_data = best_offer.price.savings
-                if savings_data and savings_data.amount:
-                    savings = savings_data.amount
-                    old_price = price + savings
-                else:
-                    # Fallback: try list_price if available
-                    try:
-                        price_data = best_offer.price.to_dict()
-                        list_price = price_data.get("list_price", {}).get("amount")
-                        if list_price and list_price > price:
-                            old_price = list_price
-                            savings = old_price - price
-                    except:
-                        pass
-
-        # 🚫 Skip if no price
+        # Skip if no price available
         if not price:
             print("⚠️ Price not available, skipping product.")
             return None, None
 
-        # 🔢 Calculate discount %
+        # Calculate discount percentage if applicable
         discount_percent = f"{(savings / old_price * 100):.2f}%" if savings and old_price else "N/A"
 
-        # 📝 Build caption
+        # Build the caption
         caption += f"🤯 {translated_title}\n\n"
         if savings:
             caption += f"😱 Discount: ₹{savings:.0f} ({discount_percent}) 🔥\n\n"
