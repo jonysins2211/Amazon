@@ -1,51 +1,41 @@
 from deep_translator import GoogleTranslator
 
-def create_product_post(product):
-    caption = ""
-    image_url = ""
-
-    if not product:
-        return None, None
-
+def format_deal_message(product):
     try:
+        # Title translation (Marathi to English or auto detect)
         title = product.item_info.title.display_value
         translated_title = GoogleTranslator(source='auto', target='en').translate(title)
-        image_url = product.images.primary.large.url
-
+        
+        # Prices
         price = None
-        old_price = None
+        savings = None
+        regular_price = None
+
         if product.offers and product.offers.listings:
             price = product.offers.listings[0].price.amount
-            savings = product.offers.listings[0].price.savings
-            if savings and savings.amount:
-                old_price = price + savings.amount
+            savings_data = product.offers.listings[0].price.savings
+            if savings_data:
+                savings = savings_data.amount
+                regular_price = price + savings
 
-        # 🚫 Skip products with no price
         if not price:
             print("⚠️ Price not available, skipping product.")
-            return None, None
+            return None
 
-        # ✅ Build caption
-        caption += f"🎯 <b>{translated_title}</b>\n\n"
-        caption += f"💥 Price: <b>{price}₹</b>\n"
+        # Calculate discount percentage
+        discount_percent = f"{(savings / regular_price * 100):.2f}%" if savings and regular_price else "N/A"
 
-        if old_price:
-            caption += f"❌ Old Price: <s>{old_price}₹</s>\n"
-            caption += f"🎁 Savings: <b>{old_price - price}₹</b>\n\n"
-        else:
-            caption += "\n"
-
-        caption += (
-            f"🚀 <b>Benefits:</b>\n"
-            f"• High-quality product 🔝\n"
-            f"• Verified deal by Deals Marathi 🔐\n"
-            f"• Opportunity to buy at a discount 🛍️\n\n"
+        # Format message
+        message = (
+            f"🤯 {translated_title}\n\n"
+            f"😱 Discount: ₹{savings:.2f} ({discount_percent}) 🔥\n\n"
+            f"❌ Regular Price: ₹{regular_price:.2f}/-\n\n"
+            f"✅ Deal Price: ₹{price:.0f}/-\n\n"
+            f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇 \n {product.detail_page_url}"
         )
 
-        caption += f"👇🏻 Click to buy:\n👉🏻 {product.detail_page_url} ✅"
-
-        return image_url, caption
+        return message
 
     except Exception as e:
-        print(f"❌ Error creating product post: {e}")
-        return None, None
+        print(f"❌ Error formatting message: {e}")
+        return None
