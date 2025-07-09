@@ -1,16 +1,15 @@
-# constants.py
 import os
 from dotenv import load_dotenv
 
-load_dotenv()  # load variables from .env
+load_dotenv()
 
 # TELEGRAM
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHANNEL_ID = os.getenv("-1001948532295")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 
-# AMAZON
-AMAZON_ACCESS_KEY = os.getenv("AKPA645Y391752095807")
-AMAZON_SECRET_KEY = os.getenv("FDeCqkr0YyaX/X+Cdgwfpw6RfTjIq/30UB0LcV3h")
-PARTNER_TAG = os.getenv("ironman1122-21")
-AMAZON_HOST = os.getenv("webservices.amazon.in")
-AMAZON_REGION = os.getenv("eu-west-1")
+# AMAZON API
+AMAZON_ACCESS_KEY = os.getenv("AMAZON_ACCESS_KEY", "AKPA645Y391752095807")
+AMAZON_SECRET_KEY = os.getenv("AMAZON_SECRET_KEY", "FDeCqkr0YyaX/X+Cdgwfpw6RfTjIq/30UB0LcV3h")
+PARTNER_TAG = os.getenv("AFFILIATE_TAG", "ironman1122-21")
+AMAZON_HOST = os.getenv("AMAZON_HOST", "webservices.amazon.in")
+AMAZON_REGION = os.getenv("AMAZON_REGION", "eu-west-1")
