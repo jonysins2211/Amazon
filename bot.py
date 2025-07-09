@@ -10,6 +10,12 @@ from constants import TELEGRAM_TOKEN, CHANNEL_ID, PARTNER_TAG
 from create_messages import create_product_post
 from amazon_api import AmazonAPI
 from utils import expand_url
+import re
+
+def extract_amazon_urls(text):
+    if not text:
+        return []
+    return re.findall(r'(https?://(?:www\.)?(?:amzn\.to|amazon\.[a-z.]+)[^\s)\n]*)', text)
 
 # --- Setup Logging ---
 logging.basicConfig(
@@ -58,68 +64,49 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
 
-    # 🛑 Safeguard: ensure message exists
     if not message:
-        logging.warning("⚠️ No message object found in update.")
         return
 
-    # Safely get message text or caption
     message_text = message.text or message.caption or ""
     logging.info(f"📩 Message received: {message_text}")
 
-    # Safe log of user and forward status
-    user_id = message.from_user.id if message.from_user else "Unknown"
-    is_forwarded = hasattr(message, "forward_date") and message.forward_date is not None
-    logging.info(f"🔍 From user: {user_id}, Forwarded: {is_forwarded}")
-    logging.info(f"🔍 Message type: text={bool(message.text)}, caption={bool(message.caption)}")
+    amazon_links = extract_amazon_urls(message_text)
+    if not amazon_links:
+        await message.reply_text("❌ No Amazon link found in the message.")
+        return
 
-    if 'amazon.' in message_text or 'amzn.to' in message_text:
-        affiliate_link = convert_to_affiliate_link(message_text)
-
+    posted = 0
+    for original_url in amazon_links:
+        affiliate_link = convert_to_affiliate_link(original_url)
         if not affiliate_link:
-            logging.warning("❌ Could not create affiliate link.")
-            await message.reply_text("❌ Could not process this link.")
-            return
+            continue
 
         try:
             amazon_api = AmazonAPI()
             product = amazon_api.get_product_from_url(affiliate_link)
-        except Exception as e:
-            logging.error(f"❌ Error fetching product: {e}")
-            await message.reply_text("⚠️ Failed to fetch product details.")
-            return
+            if not product:
+                continue
 
-        if not product:
-            logging.warning(f"⚠️ ASIN not found or product data missing for: {affiliate_link}")
-            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
-            return
-
-        try:
             image_url, caption = create_product_post(product)
-        except Exception as e:
-            logging.error(f"❌ Error creating product post: {e}")
-            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
-            return
+            if not image_url or not caption:
+                continue
 
-        if not image_url or not caption:
-            logging.warning("⚠️ Missing image or caption.")
-            await message.reply_text(f"🔗 Here's your affiliate link:\n{affiliate_link}")
-            return
-
-        try:
             await bot.send_photo(
                 chat_id=CHANNEL_ID,
                 photo=image_url,
                 caption=caption,
                 parse_mode='HTML'
             )
-            await message.reply_text("✅ Post sent to channel.")
-        except Exception as e:
-            logging.error(f"❌ Error sending to channel: {e}")
-            await message.reply_text("⚠️ Error sending post.")
-    else:
-        await message.reply_text("❗️Please send a valid Amazon link.")
+            posted += 1
 
+        except Exception as e:
+            logging.error(f"❌ Error processing link: {e}")
+            continue
+
+    if posted:
+        await message.reply_text(f"✅ Sent {posted} deal(s) to channel.")
+    else:
+        await message.reply_text("⚠️ Could not process any of the links.")
 # --- Main App Start ---
 if __name__ == '__main__':
     try:
