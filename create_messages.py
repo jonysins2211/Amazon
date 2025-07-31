@@ -38,17 +38,20 @@ def create_product_post(product):
 
         # Build the caption
         caption += f"🤯 {translated_title}\n\n"
-        if savings or old_price or price:
-            caption += "```\n"  # Start of blockquote
+        
         if savings:
-            caption += f"😱 Discount: ₹{savings:.0f} ({discount_percent}) 🔥\n\n"
+            quote_block = ""
+            quote_block += f"😱 Discount: ₹{savings:.0f} ({discount_percent}) 🔥\n\n"
         if old_price:
-            caption += f"❌ Regular Price: ₹{old_price:.0f}/-\n\n"
-        caption += f"✅ Deal Price: ₹{price:.0f}/-\n\n"
-        caption += "```\n\n"
+            quote_block += f"❌ Regular Price: ₹{old_price:.0f}/-\n\n"
+        quote_block += f"✅ Deal Price: ₹{price:.0f}/-\n\n"
+        caption += f"```\n{quote_block}```\n\n"
+        
         caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇 \n {product.detail_page_url}"
 
         return image_url, caption
+          
+        bot.send_message(chat_id, caption, parse_mode='Markdown')
 
     except Exception as e:
         print(f"❌ Error creating product post: {e}")
