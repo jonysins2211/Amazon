@@ -46,8 +46,8 @@ def create_product_post(product):
        caption += f"**✅ Deal Price:** ₹{price:.0f}/-**\n"
        caption += "╰━━━━━━━━━━━━━━━━━━━━━╯\n\n"
 
-        caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇\n{product.detail_page_url}"
-        return image_url, caption
+       caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇\n{product.detail_page_url}"
+       return image_url, caption
 
     except Exception as e:
         print(f"❌ Error creating product post: {e}")
