@@ -48,7 +48,7 @@ def create_product_post(product):
         if old_price:
             caption += f"**❌ Regular Price:** ₹{old_price:.0f}/-\n\n"
         caption += f"**✅ Deal Price:** ₹{price:.0f}/-**\n"
-        caption += "╰━━━━━━━━━━━━━━━━━━━━━╯\n"
+        caption += "╰━━━━━━━━━━━━━━━━━━━━━╯\n\n"
 
         caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇\n{product.detail_page_url}"
         return image_url, caption
