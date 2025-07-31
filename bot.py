@@ -95,7 +95,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 chat_id=CHANNEL_ID,
                 photo=image_url,
                 caption=caption,
-                parse_mode='HTML'
+                parse_mode='Markdown'
             )
             posted += 1
 
