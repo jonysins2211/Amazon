@@ -38,16 +38,15 @@ def create_product_post(product):
 
         # Build the caption
         caption = f"🤯 {translated_title}\n\n"
+        caption += "╭━━━━━━━━━━━━━━━━━━━━━╮\n"
+      if savings:   
+         caption += f"**😱 Discount:** ₹{savings:.0f} ({discount_percent}) 🔥\n"
+      if old_price:
+         caption += f"**❌ Regular Price:** ₹{old_price:.0f}/-\n"
+         caption += f"**✅ Deal Price:** ₹{price:.0f}/-**\n"
+         caption += "╰━━━━━━━━━━━━━━━━━━━━━╯\n\n"
 
-caption += "╭━━━━━━━━━━━━━━━━━━━━━╮\n"
-if savings:
-    caption += f"**😱 Discount:** ₹{savings:.0f} ({discount_percent}) 🔥\n"
-if old_price:
-    caption += f"**❌ Regular Price:** ₹{old_price:.0f}/-\n"
-caption += f"**✅ Deal Price:** ₹{price:.0f}/-**\n"
-caption += "╰━━━━━━━━━━━━━━━━━━━━━╯\n\n"
-
-caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇\n{product.detail_page_url}"
+        caption += f"🛒 𝗕𝗨𝗬 𝗡𝗢𝗪 👇\n{product.detail_page_url}"
         return image_url, caption
 
     except Exception as e:
